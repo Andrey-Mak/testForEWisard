@@ -4,6 +4,7 @@
 			:items="users"
 			:search="search"
 			class="elevation-1"
+			:calculate-widths="true"
 			loading-text="Loading... Please wait">
 
 		<template v-slot:top>
@@ -36,7 +37,7 @@
 														  label="First name"></v-text-field>
 											<v-text-field v-model="editedItem.last_name"
 														  label="Last name"></v-text-field>
-											<v-text-field v-model="editedItem.phone_number"
+											<v-text-field type="phone" v-model="editedItem.phone_number" v-mask="'###-###-##-##'"
 														  label="Phone"></v-text-field>
 										</v-container>
 									</v-card-text>
@@ -69,10 +70,12 @@
 </template>
 
 <script>
-	import axios from 'axios'
+	import axios from 'axios';
+	import {mask} from 'vue-the-mask'
 
 	export default {
 		name: 'tabs',
+		directives: {mask},
 		data(){
 			return {
 				dialog: false,
@@ -81,7 +84,7 @@
 						text: 'Name',
 						align: 'left',
 						sortable: false,
-						value: 'first_name'
+						value: 'name'
 					},
 					{text: 'Phone', value: 'phone_number'},
 					{text: 'Actions', value: 'action', sortable: false,
@@ -98,11 +101,15 @@
 				editedIndex: -1,
 				editedItem: {
 					first_name: '',
-					phone_number: ''
+					last_name: '',
+					phone_number: '',
+					favorite: false
 				},
 				defaultItem: {
 					first_name: '',
-					phone_number: ''
+					last_name: '',
+					phone_number: '',
+					favorite: false
 				}
 			}
 		},
@@ -116,8 +123,10 @@
 				axios
 					.get('http://localhost:3000/users')
 					.then(response =>{
-						this.users = Object.values(response.data);
-						console.log(this.users);
+						if(response.status === 200){
+							this.users = Object.values(response.data);
+							this.setFullName();
+						}
 					})
 					.catch(err => console.warn(err))
 					.finally(() => (this.loading = false));
@@ -125,6 +134,9 @@
 			favoriteUser(user){
 				user.favorite = !user.favorite;
 				this.$store.dispatch('editUser', user);
+			},
+			setFullName(){
+				this.users.forEach((user) => user.name = `${user.first_name} ${user.last_name}`)
 			},
 			editUser(user){
 				this.editedIndex = this.users.indexOf(user)
@@ -145,8 +157,9 @@
 				this.dialog = false;
 				setTimeout(() =>{
 					this.editedItem = Object.assign({}, this.defaultItem);
-					this.editedIndex = -1
-				}, 300)
+					this.editedIndex = -1;
+					this.initialize();
+				}, 500)
 			},
 
 			save(){
@@ -157,9 +170,8 @@
 					this.users.push(this.editedItem);
 					this.$store.dispatch('editUser', this.editedItem);
 				}
-				console.log(this.users);
-
-				this.close()
+				this.setFullName();
+				this.close();
 			}
 		},
 		mounted(){

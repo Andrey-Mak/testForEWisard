@@ -17,3 +17,11 @@ npm run build
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+
+
+# Server
+
+	cd server
+	npm i
+	npm run start

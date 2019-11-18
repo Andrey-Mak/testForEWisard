@@ -1,3 +1,4 @@
+const config = require('./config');
 const express = require('express');
 const mongoose = require('mongoose');
 
@@ -15,11 +16,11 @@ app.use(express.urlencoded());
 app.use(express.json());
 app.use(usersRouter);
 
-app.listen(3000, () => { console.log("The server has been started"); });
+app.listen(config.port, () => { console.log("The server has been started"); });
 
 async function begin(){
 	try{
-		await mongoose.connect("mongodb+srv://admin:pass4DB@cluster0-rwgpv.mongodb.net/testForeWizard", {
+		await mongoose.connect(`mongodb+srv://admin:${config.mongo.pass}@cluster0-rwgpv.mongodb.net/testForeWizard`, {
 			useNewUrlParser: true,
 			useUnifiedTopology: true
 		});
