@@ -15,5 +15,4 @@ const userSchema = new Schema({
 		default: false
 	}
 });
-
 module.exports = model('User', userSchema);

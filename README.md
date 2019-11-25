@@ -25,3 +25,7 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 	cd server
 	npm i
 	npm run start
+
+## for search
+
+	http://localhost/:3000/users/search?search=Василий

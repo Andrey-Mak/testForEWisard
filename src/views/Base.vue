@@ -4,52 +4,25 @@
 			:items="users"
 			:search="search"
 			class="elevation-1"
-			:calculate-widths="true"
-			loading-text="Loading... Please wait">
+			:calculate-widths="true">
 
 		<template v-slot:top>
 			<v-container>
-						<v-text-field
-								class="mx-4 md-4"
-								solo
-								v-model="search"
-								label="Search"
-								prepend-inner-icon="mdi-magnify"
-						></v-text-field>
+				<v-text-field class="mx-4 md-4" solo v-model="search" label="Search"
+							  prepend-inner-icon="mdi-magnify"></v-text-field>
 
-						<v-toolbar color="white">
-							<v-toolbar-title @click="isFavorites = false">Contacts</v-toolbar-title>
-							<v-divider class="mx-4" inset vertical></v-divider>
-							<v-toolbar-title @click="isFavorites = true">Favorites</v-toolbar-title>
-							<v-spacer></v-spacer>
-							<v-dialog v-model="dialog" max-width="500px">
-								<template v-slot:activator="{ on }">
-									<v-btn color="primary" dark class="mb-2" v-on="on">NEW CONTACT
-									</v-btn>
-								</template>
-								<v-card>
-									<v-card-title>
-										<span class="headline">{{ formTitle }}</span>
-									</v-card-title>
-									<v-card-text>
-										<v-container>
-											<v-text-field v-model="editedItem.first_name"
-														  label="First name"></v-text-field>
-											<v-text-field v-model="editedItem.last_name"
-														  label="Last name"></v-text-field>
-											<v-text-field type="phone" v-model="editedItem.phone_number" v-mask="'###-###-##-##'"
-														  label="Phone"></v-text-field>
-										</v-container>
-									</v-card-text>
-									<v-card-actions>
-										<v-spacer></v-spacer>
-										<v-btn color="blue darken-1" text @click="close">Cancel
-										</v-btn>
-										<v-btn color="blue darken-1" text @click="save">Save</v-btn>
-									</v-card-actions>
-								</v-card>
-							</v-dialog>
-						</v-toolbar>
+				<v-toolbar color="white">
+					<v-toolbar-title @click="isFavorites = false"
+									 :class="['tab-title', {active: !isFavorites}]">Contacts
+					</v-toolbar-title>
+					<v-divider class="mx-4" inset vertical></v-divider>
+					<v-toolbar-title @click="isFavorites = true"
+									 :class="['tab-title', {active: isFavorites}]">Favorites
+					</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-btn color="primary" dark class="mb-2" @click="addUser">NEW CONTACT</v-btn>
+					<dialog-popup :index="editedIndex"></dialog-popup>
+				</v-toolbar>
 
 			</v-container>
 		</template>
@@ -70,15 +43,15 @@
 </template>
 
 <script>
-	import axios from 'axios';
-	import {mask} from 'vue-the-mask'
+	import dialogPopup from '../components/dialog-popup';
 
 	export default {
 		name: 'tabs',
-		directives: {mask},
+		components: {
+			dialogPopup,
+		},
 		data(){
 			return {
-				dialog: false,
 				headers: [
 					{
 						text: 'Name',
@@ -87,8 +60,9 @@
 						value: 'name'
 					},
 					{text: 'Phone', value: 'phone_number'},
-					{text: 'Actions', value: 'action', sortable: false,
-						filter: (value, search, item) => {
+					{
+						text: 'Actions', value: 'action', sortable: false,
+						filter: (value, search, item) =>{
 							if(!this.isFavorites) return true;
 							return this.isFavorites && item.favorite;
 						}
@@ -97,81 +71,40 @@
 				search: '',
 				isFavorites: false,
 				loading: true,
-				users: [],
-				editedIndex: -1,
-				editedItem: {
-					first_name: '',
-					last_name: '',
-					phone_number: '',
-					favorite: false
-				},
-				defaultItem: {
-					first_name: '',
-					last_name: '',
-					phone_number: '',
-					favorite: false
-				}
+				editedIndex: -1
 			}
 		},
 		computed: {
-			formTitle(){
-				return this.editedIndex === -1 ? 'New Item' : 'Edit Item'
+			users(){
+				let userList = this.$store.getters.usersList;
+				userList.forEach((user) => user.name = `${user.first_name} ${user.last_name}`);
+				return userList
 			}
 		},
 		methods: {
 			initialize(){
-				axios
-					.get('http://localhost:3000/users')
-					.then(response =>{
-						if(response.status === 200){
-							this.users = Object.values(response.data);
-							this.setFullName();
-						}
-					})
-					.catch(err => console.warn(err))
-					.finally(() => (this.loading = false));
+				this.$store.dispatch('getUsersList');
 			},
 			favoriteUser(user){
 				user.favorite = !user.favorite;
 				this.$store.dispatch('editUser', user);
 			},
-			setFullName(){
-				this.users.forEach((user) => user.name = `${user.first_name} ${user.last_name}`)
-			},
-			editUser(user){
-				this.editedIndex = this.users.indexOf(user)
-				this.editedItem = Object.assign({}, user)
-				this.dialog = true
-			},
-
 			deleteUser(user){
-				console.log(user);
-				const index = this.users.indexOf(user);
-				if(confirm('Are you sure you want to delete this user?')){
-					this.users.splice(index, 1);
+				if(confirm(`Are you sure you want to delete ${user.name}?`)){
+					this.editedIndex = -1;
 					this.$store.dispatch('deleteUser', user);
 				}
 			},
-
-			close(){
-				this.dialog = false;
-				setTimeout(() =>{
-					this.editedItem = Object.assign({}, this.defaultItem);
-					this.editedIndex = -1;
-					this.initialize();
-				}, 500)
+			showDialog(){
+				this.$store.commit('showPopup', true);
 			},
-
-			save(){
-				if(this.editedIndex > -1){
-					Object.assign(this.users[this.editedIndex], this.editedItem);
-					this.$store.dispatch('editUser', this.users[this.editedIndex]);
-				}else{
-					this.users.push(this.editedItem);
-					this.$store.dispatch('editUser', this.editedItem);
-				}
-				this.setFullName();
-				this.close();
+			addUser(){
+				this.editedIndex = -1;
+				this.showDialog();
+			},
+			editUser(currentUser){
+				this.editedIndex = this.users.findIndex((user) => user["_id"] === currentUser["_id"]);
+				this.showDialog();
 			}
 		},
 		mounted(){
@@ -180,6 +113,11 @@
 	}
 </script>
 
-<style scoped lang="scss">
-
+<style scoped>
+	.tab-title{
+		cursor: pointer;
+	}
+	.tab-title.active{
+		border-bottom: 2px solid grey;
+	}
 </style>

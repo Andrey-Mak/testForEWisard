@@ -14,7 +14,7 @@ app.use((req, res, next) => {
 });
 app.use(express.urlencoded());
 app.use(express.json());
-app.use(usersRouter);
+app.use('/users', usersRouter);
 
 app.listen(config.port, () => { console.log("The server has been started"); });
 
